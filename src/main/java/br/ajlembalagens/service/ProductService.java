@@ -1,4 +1,4 @@
-package br.ajlembalagens.controller;
+package br.ajlembalagens.service;
 
 import br.ajlembalagens.entity.Product;
 import br.ajlembalagens.repository.ProductRepository;
@@ -6,12 +6,13 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 import javax.enterprise.context.ApplicationScoped;
-import java.util.ArrayList;
+import javax.inject.Inject;
 import java.util.List;
 
 @ApplicationScoped
-public class ProductController {
+public class ProductService{
 
+    @Inject
     private ProductRepository repository;
 
     public Product update(Long id, Product product){
@@ -29,12 +30,11 @@ public class ProductController {
         return productEntity;
     }
 
-    public Product create(Product product){
-        if(product.getProductName() == null){
-            throw new WebSocketClientHandshakeException("Erro ao cadastrar produto :(");
-        }
-        return product;
+    public Product getProductById(Long id){
+        Product productEntity = repository.findById(id);
+        return productEntity;
     }
+
 
     /**
             * This method is main purpose to show simple "Business" example
@@ -47,18 +47,20 @@ public class ProductController {
     }
 
     public boolean isExistsProductCode(String code, Product product){
-        product = (Product) repository.find("select *from product");
-        if(product == null){
-            return false;
+
+        PanacheQuery<Product> query = repository.findAll();
+        List<Product> productSearch = query.list();
+
+        for(Product p: productSearch ){
+            if(p.getProductCode().equals(product.getProductCode())){
+               return true;
+            }
         }
-        return true;
+        return false;
     }
 
     public Product delete(Long id){
         Product productEntity = repository.findById(id);
-        if(productEntity.getId() == null) {
-            return null;
-        }
         return productEntity;
     }
 }

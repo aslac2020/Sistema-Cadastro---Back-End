@@ -1,6 +1,6 @@
 package br.ajlembalagens;
 
-import br.ajlembalagens.controller.ProductController;
+import br.ajlembalagens.service.ProductService;
 import br.ajlembalagens.entity.Product;
 import br.ajlembalagens.repository.ProductRepository;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
@@ -20,7 +20,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
-import java.util.List;
 
 @Path("/products")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -52,7 +51,7 @@ public class ProductResource {
     }
 
     @Inject
-    private ProductController productController;
+    private ProductService productService;
 
     @GET
     public Response findAll() {
@@ -64,10 +63,10 @@ public class ProductResource {
     @Path("{id}")
     public Response findProductById(@PathParam("id") Long id){
 
-        Product productEntity = repository.findById(id);
+        Product productEntity = productService.getProductById(id);
 
         if(productEntity == null){
-            return Response.ok("Id do produto não existe").type(MediaType.APPLICATION_JSON_TYPE).build();
+            return Response.status(400).entity("Id do produto não existe").build();
         }
 
         return Response.ok(productEntity).status(200).build();
@@ -78,17 +77,12 @@ public class ProductResource {
     @Transactional
     public Response create(Product product){
 
-        if(productController.isFoodNameIsNotEmpty(product)){
+        if(productService.isFoodNameIsNotEmpty(product)){
             return Response.ok("Favor informar nome do produto").type(MediaType.APPLICATION_JSON_TYPE).build();
         }
 
-        PanacheQuery<Product> query = repository.findAll();
-        List<Product> productSearch = query.list();
-
-        for(Product p: productSearch ){
-            if(p.getProductCode().equals(product.getProductCode())){
-                return Response.status(400). entity( " Codigo do produto : " + product.getProductCode() +" já existe, favor inserir outro código").build();
-            }
+        if(productService.isExistsProductCode(product.getProductCode(),product)){
+            return Response.status(400). entity( " Codigo do produto : " + product.getProductCode() +" já existe, favor inserir outro código").build();
         }
 
         repository.persist(product);
@@ -100,10 +94,10 @@ public class ProductResource {
     @Transactional
     public Response update(@PathParam("id")Long id, Product product){
 
-        if(productController.isFoodNameIsNotEmpty(product)){
+        if(productService.isFoodNameIsNotEmpty(product)){
                 return Response.ok("Produto não existe").type(MediaType.APPLICATION_JSON_TYPE).build();
         }
-        Product productEntity = productController.update(id, product);
+        Product productEntity = productService.update(id, product);
 
         return Response.ok(productEntity).build();
     }
@@ -112,7 +106,7 @@ public class ProductResource {
     @Path("{id}")
     @Transactional
     public Response delete(@PathParam("id")Long id) {
-        Product productEntity = repository.findById(id);
+        Product productEntity = productService.delete(id);
 
         if (productEntity == null) {
             return Response.status(400).entity("Produto não encontrado :(").build();
